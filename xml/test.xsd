@@ -1,19 +1,38 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <xsd:element name="autotest">
     <xsd:complexType>
       <xsd:sequence>
         <xsd:element name="title" type="xsd:string" />
-        <xsd:element name="author" type="userType"></xsd:element>
-        <xsd:element name="pubDate" type="xsd:dateTime"></xsd:element>
-        <xsd:element name="tests">
+        <xsd:element name="author" type="userType">
+        </xsd:element>
+        <xsd:element name="pubDate" type="xsd:dateTime">
+        </xsd:element>
+        <xsd:element ref="tests">
+        </xsd:element>
+        <xsd:element ref="env" minOccurs="0" />
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+  <xsd:element name="env">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="account" minOccurs="0" maxOccurs="unbounded">
           <xsd:complexType>
-            <xsd:sequence>
-              <xsd:element minOccurs="1" maxOccurs="unbounded" ref="test"></xsd:element>
-            </xsd:sequence>
+            <xsd:attribute name="name" type="xsd:string" />
+            <xsd:attribute name="type" type="xsd:string" />
+            <xsd:attribute name="user" type="xsd:string" />
+            <xsd:attribute name="passwd" type="xsd:string" />
           </xsd:complexType>
         </xsd:element>
-        <xsd:element ref="reports" minOccurs="0" />
+        <xsd:element name="host" minOccurs="0" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:attribute name="name" type="xsd:string" />
+            <xsd:attribute name="addr" type="xsd:string" />
+            <xsd:attribute name="protocol" type="xsd:string" />
+            <xsd:attribute name="account" type="xsd:string" />
+          </xsd:complexType>
+        </xsd:element>
       </xsd:sequence>
     </xsd:complexType>
   </xsd:element>
@@ -31,6 +50,22 @@
       <xsd:attribute name="end" type="xsd:dateTime" />
     </xsd:complexType>
   </xsd:element>
+  <xsd:element name="tests">
+    <xsd:complexType>
+      <xsd:choice>
+        <xsd:sequence>
+          <xsd:element name="title" type="xsd:string" minOccurs="1" />
+          <xsd:element minOccurs="1" maxOccurs="unbounded" ref="test">
+          </xsd:element>
+        </xsd:sequence>
+        <xsd:sequence>
+          <xsd:element minOccurs="1" maxOccurs="unbounded" ref="tests">
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:choice>
+      <xsd:attribute name="clause" type="xsd:integer" />
+    </xsd:complexType>
+  </xsd:element>
   <xsd:element name="test">
     <xsd:complexType>
       <xsd:choice>
@@ -41,7 +76,7 @@
           <xsd:group ref="testBody" minOccurs="1" maxOccurs="1" />
         </xsd:sequence>
       </xsd:choice>
-      <xsd:attribute name="id" type="xsd:ID" />
+      <xsd:attribute name="clause" type="xsd:integer" />
     </xsd:complexType>
   </xsd:element>
   <xsd:group name="testBody">
@@ -78,7 +113,8 @@
         <xsd:element name="log">
           <xsd:complexType>
             <xsd:sequence>
-              <xsd:element name="initialize" type="xsd:string" minOccurs="0" maxOccurs="1"></xsd:element>
+              <xsd:element name="initialize" type="xsd:string" minOccurs="0" maxOccurs="1">
+              </xsd:element>
               <xsd:element name="main" type="xsd:string" minOccurs="0" maxOccurs="1" />
               <xsd:element name="finalize" type="xsd:string" minOccurs="0" maxOccurs="1" />
             </xsd:sequence>
@@ -98,11 +134,10 @@
       <xsd:simpleContent>
         <xsd:extension base="xsd:string">
           <xsd:attribute name="src" type="xsd:string" />
-          <xsd:attribute name="type" type="xsd:string" />
-          <xsd:attribute name="host" type="xsd:string" default="local" />
-          <xsd:attribute name="protocol" type="xsd:string" default="telnet" />
-          <xsd:attribute name="user" type="xsd:string" default="test" />
-          <xsd:attribute name="passwd" type="xsd:string" default="test" />
+          <xsd:attribute name="account" type="xsd:string" />
+          <xsd:attribute name="host" type="xsd:string" />
+          <xsd:attribute name="protocol" type="xsd:string" />
+          <xsd:attribute name="loop" type="xsd:string" />
         </xsd:extension>
       </xsd:simpleContent>
     </xsd:complexType>

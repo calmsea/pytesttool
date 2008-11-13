@@ -5,8 +5,41 @@
 #
 from tests import *
 from script import *
+from xml.dom import minidom
 import re
 from cStringIO import StringIO
+
+# TestTool
+def TestTool_loadXml(self, xmlfile):
+    doc = minidom.parse(xmlfile)
+
+    self.env = Env()
+    self.env.fromXml(doc.getElementsByTagName(u'env')[0])
+    root = doc.getElementsByTagName(u'autotest')[0]
+    self.title = root.getElementsByTagName(u'title')[0].firstChild.data
+    author = root.getElementsByTagName(u'author')[0]
+    self.author = author.getElementsByTagName(u'name')[0].firstChild.data
+    self.mtime = root.getElementsByTagName(u'pubDate')[0].firstChild.data
+
+    self.tests = Tests(self.env)
+    self.tests.fromXml(root.getElementsByTagName(u'tests')[0])
+TestTool.loadXml = TestTool_loadXml
+
+def TestTool_saveXml(self, xmlfile):
+    doc = minidom.parseString('<?xml-stylesheet type="text/xsl" href="report_html.xsl"?><autotest></autotest>')
+
+    root = doc.getElementsByTagName(u'autotest')[0]
+    reports = self.tests.toXml(doc)
+    reports.setAttribute(u'start', time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(self.starttime)))
+    reports.setAttribute(u'end', time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(self.endtime)))
+    root.appendChild(reports)
+
+    output = file(xmlfile, "w")
+    try:
+        output.write(doc.toxml().encode('utf-8'))
+    finally:
+        output.close()
+TestTool.saveXml = TestTool_saveXml
 
 # Report
 def Report_toXml(self, doc):
@@ -62,7 +95,6 @@ Script.fromXml = Script_fromXml
 # Test
 def Test_fromXml(self, root):
     self.id = root.getAttribute(u'id')
-    print root.__dict__
     self.title = root.getElementsByTagName(u'title')[0].firstChild.data
     self.description = root.getElementsByTagName(u'description')[0].firstChild.data
     self.pubDate = root.getElementsByTagName(u'pubDate')[0].firstChild.data
@@ -79,18 +111,20 @@ def Test_fromXml(self, root):
 Test.fromXml = Test_fromXml
 
 def Test_toXml(self, doc):
-    return self.report.toXmlElements(doc)
+    return self.report.toXml(doc)
 Test.toXml = Test_toXml
 
 # Tests
 def Tests_fromXml(self, root):
-    self.id = root.getAttribute(u'id')
+    self.clause = root.getAttribute(u'clause'))
     for node in root.childNodes:
         try:
             tag = node.tagName
         except:
             continue
-        if tag == u'test':
+        if tag == u'title':
+            self.title = node.firstChild().data
+        elif tag == u'test':
             test = Test(self.env)
             test.fromXml(node)
             self.test_list.append(test)
@@ -103,11 +137,11 @@ Tests.fromXml = Tests_fromXml
 def Tests_toXml(self, doc):
     reports = doc.createElement(u'reports')
     for test in self.test_list:
-        reports.appendChild(test.toXmlElements(doc))
+        reports.appendChild(test.toXml(doc))
     for tests in self.tests_list:
-        reports.appendChild(tests.toXmlElements(doc))
+        reports.appendChild(tests.toXml(doc))
     return reports
-Tests.toXml = Test_toXml
+Tests.toXml = Tests_toXml
 
 # EnvParam
 def EnvParam_fromXml(self, element):

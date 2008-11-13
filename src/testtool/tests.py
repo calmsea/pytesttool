@@ -3,15 +3,23 @@
 #
 #
 #
-import sys
 import time
-import pexpect
-import re
-import signal
-from pexpect import ExceptionPexpect
 from cStringIO import StringIO
-import xml.dom.minidom as dom
-from pprint import pprint
+
+class TestTool(object):
+    def __init__(self):
+        self.title = ""
+        self.author = ""
+        self.ctime = 0
+        self.mtime = 0
+        self.tests = None
+        self.env = None
+        self.starttime = 0
+        self.endtime = 0
+    def run(self):
+        self.starttime = time.time()
+        self.tests.run()
+        self.endtime = time.time()
 
 class Report(object):
     RESULT_PASS = 0
@@ -40,6 +48,7 @@ class Test(object):
         self.pubDate = ""
         self.procedure = {}
         self.env = env
+        self.report = None
     def run(self):
         report = Report()
         report.id = self.id
@@ -56,7 +65,8 @@ class Tests(object):
     def __init__(self, env):
         self.tests_list = []
         self.test_list = []
-        self.id = None
+        self.id = ""
+        self.title = ""
         self.reports = []
         self.env = env
     def run(self):
