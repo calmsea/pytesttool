@@ -35,7 +35,7 @@ class TestTool(object):
         self.tests.setTest(item, clause)
     def getTest(self, clause):
         return self.tests.getTest(clause)
-
+    
     #
     # add Env
     #
@@ -47,9 +47,9 @@ class TestTool(object):
     def __str__(self):
         sout = StringIO()
         sout.write("TestTool ENV>>>\n%s" % self.env)
-        sout.write("TestTool Tests>>>\n<testtool>%s</testtool>" % self.tests)
+        sout.write("TestTool Tests>>>\n%s" % self.tests)
         return sout.getvalue()
-    
+
 class Report(object):
     RESULT_PASS = 0
     RESULT_FAIL = 1
@@ -74,6 +74,12 @@ class TestNode(object):
         self.title = kwds.get("title", "")
         self.ctime = time.time()
         self.mtime = time.time()
+    def __str__(self):
+        return """Title : %s
+Create Time : %s
+Modify Time : %s""" % (self.title,
+                       time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.ctime)),
+                       time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.mtime)),)
 
 class Test(TestNode):
     def __init__(self, **kwds):
@@ -93,7 +99,8 @@ class Test(TestNode):
         return report
     def __str__(self):
         sout = StringIO()
-        sout.write("<description>%s</description>" % self.description)
+        sout.write("%s\n" % super(Test, self).__str__())
+        sout.write("Description : %s" % self.description)
         return sout.getvalue()
 
 class Tests(TestNode):
@@ -141,11 +148,14 @@ class Tests(TestNode):
     
     def __str__(self):
         sout = StringIO()
-        sout.write("<title>%s</title>" % self.title)
-        for i, test in enumerate(self._test_list):
-            sout.write("<test clause=\"%d\">%s</test>" % (i+1, test))
-        for i, tests in enumerate(self._tests_list):
-            sout.write("<tests clause=\"%d\">%s</tests>" % (i+1, tests))
+        sout.write("Tests : %s\n" % self.title)
+        sout.write("%s\n" % super(Tests, self).__str__())
+        for test in self._test_list:
+            for line in str(test).splitlines():
+                sout.write("\t%s\n" % line)
+        for tests in self._tests_list:
+            for line in str(tests).splitlines():
+                sout.write("\t%s\n" % line)
         return sout.getvalue()
 
 class EnvParam(object):
