@@ -19,6 +19,7 @@ class Script(object):
         self.timeout = 4000
         self.sout = StringIO()
         self.env = env
+        self.intermission = 2
     def processing(self, pe, line):
         print "prompt> %s" % line
         mo = re.search(r"^(?P<line>.*)\[\[(?P<commands>.*)\]\]$", line)
@@ -79,6 +80,7 @@ class Script(object):
     def run_initialize(self):
         pass
     def run_finalize(self):
+        time.sleep(self.intermission)
         pass
 
 class LocalScript(Script):
@@ -102,6 +104,10 @@ class LocalScript(Script):
 
 class TelnetScript(Script):
     prompt = re.compile(r"^[^#]+[#$] ", re.MULTILINE)
+
+    def run_initialize(self):
+        super(TelnetScript, self).run_initialize()
+        time.sleep(2)
 
     def run_main(self):
         host = self.env.getHost(self.host).addr
@@ -141,6 +147,10 @@ class TelnetScript(Script):
 
 class FtpScript(Script):
     prompt = re.compile(r"^[^>]+> ", re.MULTILINE)
+
+    def run_initialize(self):
+        super(FtpScript, self).run_initialize()
+        time.sleep(2)
     def run_main(self):
         host = self.env.getHost(self.host).addr
         if self.account:

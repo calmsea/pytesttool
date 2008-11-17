@@ -5,72 +5,50 @@
 #
 from tests import *
 from script import *
-from xml.dom import minidom
 import re
-from cStringIO import StringIO
+import sqlite3
 
-# TestTool
-def TestTool_loadXml(self, xmlfile):
-    doc = minidom.parse(xmlfile)
+def dbopen(dbfile="db"):
+    return sqlite3.connect(dbfile)
 
-    self.env = Env()
-    self.env.fromXml(doc.getElementsByTagName(u'env')[0])
-    root = doc.getElementsByTagName(u'autotest')[0]
-    self.title = root.getElementsByTagName(u'title')[0].firstChild.data
-    author = root.getElementsByTagName(u'author')[0]
-    self.author = author.getElementsByTagName(u'name')[0].firstChild.data
-    self.mtime = root.getElementsByTagName(u'pubDate')[0].firstChild.data
-
-    self.tests = Tests(self.env)
-    self.tests.fromXml(root.getElementsByTagName(u'tests')[0])
-TestTool.loadXml = TestTool_loadXml
-
-def TestTool_saveXml(self, xmlfile):
-    doc = minidom.parseString('<?xml-stylesheet type="text/xsl" href="report_html.xsl"?><autotest></autotest>')
-
-    root = doc.getElementsByTagName(u'autotest')[0]
-    reports = self.tests.toXml(doc)
-    reports.setAttribute(u'start', time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(self.starttime)))
-    reports.setAttribute(u'end', time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(self.endtime)))
-    root.appendChild(reports)
-
-    output = file(xmlfile, "w")
+def TestTool_saveSql(self, dbfile):
+    print self.__dict__
+    finished = False
+    con = dbopen(dbfile)
     try:
-        output.write(doc.toxml().encode('utf-8'))
+        createtable(con)
+        con.commit()
+        cur = con.cursor()
+        # info
+        for item in (("title", self.title),
+                     ("mtime", self.mtime),
+                     ("author", self.author),
+                     ):
+            cur.execute('update info set value="%s" where name = "%s"' % (item[1], item[0]) )
+        con.commit()
+        self.tests.commitSql(con)
+        finished = True
+        dump(con)
+#    except:
+#        print "Exception!!"
+#        if not finished:
+#            con.rollback()
     finally:
-        output.close()
-TestTool.saveXml = TestTool_saveXml
+        con.close()
+TestTool.saveSql = TestTool_saveSql
 
 # Report
-def Report_toXml(self, doc):
-    report = doc.createElement("report")
-    # id
-    report.setAttribute(u'ref', "%s" % self.id)
-    # date
-    date = doc.createElement(u"date")
-    date.appendChild(doc.createTextNode(time.strftime("%Y-%m-%dT%H:%M:%S")))
-    report.appendChild(date)
-    # tester
-    tester = doc.createElement(u"tester")
-    name = doc.createElement(u"name")
-    name.appendChild(doc.createTextNode(self.tester))
-    tester.appendChild(name)
-    report.appendChild(tester)
-    # result
-    result = doc.createElement(u"result")
-    result.setAttribute(u"value", str(self.result))
-    result.appendChild(doc.createTextNode(self.resultstring()))
-    report.appendChild(result)
-    # log
-    log = doc.createElement(u"log")
-    for key, val in self.logs.items():
-        ent = doc.createElement(unicode(key))
-        ent.appendChild(doc.createTextNode(val))
-        log.appendChild(ent)
-    report.appendChild(log)
-
-    return report
-Report.toXml = Report_toXml
+def Report_commitSql(self, con):
+    try:
+        cur = con.cursor()
+        cur.execute('''
+insert into report(test_id, reports_id, ctime, result, log) valuses(?,?,?,?,?)
+)''', (self.test_id, self.report_id, timenow(), self.result, self.log,))
+    except:
+        con.rollback()
+    else:
+        con.commit()
+Report.commitSql = Report_commitSql
 
 # Script
 def Script_fromXml(self, root):
@@ -95,6 +73,7 @@ Script.fromXml = Script_fromXml
 # Test
 def Test_fromXml(self, root):
     self.id = root.getAttribute(u'id')
+    print root.__dict__
     self.title = root.getElementsByTagName(u'title')[0].firstChild.data
     self.description = root.getElementsByTagName(u'description')[0].firstChild.data
     self.pubDate = root.getElementsByTagName(u'pubDate')[0].firstChild.data
@@ -115,16 +94,22 @@ def Test_toXml(self, doc):
 Test.toXml = Test_toXml
 
 # Tests
-def Tests_fromXml(self, root):
-    self.clause = root.getAttribute(u'clause')
+def Tests_commitSql(self, con):
+    try:
+        cur = con.cursor()
+        cur.execute('insert into clause')
+    except:
+        con.rollback()
+    else:
+        con.commit()
+
+    self.id = root.getAttribute(u'id')
     for node in root.childNodes:
         try:
             tag = node.tagName
         except:
             continue
-        if tag == u'title':
-            self.title = node.firstChild().data
-        elif tag == u'test':
+        if tag == u'test':
             test = Test(self.env)
             test.fromXml(node)
             self.test_list.append(test)
@@ -171,6 +156,65 @@ def Env_fromXml(self, root):
         host = Host(element)
         self.hosts[host.name] = host
 Env.fromXml = Env_fromXml
+
+def dump(con):
+    cur = con.cursor()
+    for tbl in ["info", "clause1", "clause2", "clause3", "test", "reports", "report", "report"]:
+        print "[%s]" % tbl
+        cur.execute('select * from %s' % tbl)
+        for row in cur:
+            print row
+
+def createtable(con):
+    con.executescript('''
+create table if not exists info (
+  name text unique,
+  value text
+);
+insert or ignore into info(name,value) values("title","");
+insert or ignore into info(name,value) values("author","");
+insert or ignore into info(name,value) values("mtime","");
+create table if not exists clause (
+  clause1 integer not null,
+  clause2 integer,
+  clause3 integer,
+  title text
+);
+create table if not exists test (
+  idx integer primary key,
+  clause1 integer,
+  clause2 integer,
+  clause3 integer,
+  title text,
+  description text,
+  ctime datetime,
+  procedure text
+);
+create table if not exists reports (
+  idx integer primary key,
+  starttime datetime,
+  endtime datetime
+);
+create table if not exists report (
+  idx integer primary key,
+  test_id integer,
+  reports_id integer,
+  ctime datetime
+  result integer,
+  log text
+);
+''')
+
+def test():
+    import xmllib
+
+    tool = TestTool()
+    tool.loadXml("../../xml/test.xml")
+    tool.saveSql("dbtest")
+
+if __name__ == "__main__":
+    test()
+
 
 #
 # EOF
