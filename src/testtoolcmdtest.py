@@ -17,11 +17,18 @@ class TestTestToolCmd(unittest.TestCase):
 
     def testadd(self):
         self.cmd.onecmd("show")
-        self.cmd.onecmd("add test title test1")
-        self.cmd.onecmd("add test title test2")
-        self.cmd.onecmd("add test title test3")
-        self.cmd.onecmd("add test title test4")
-        self.cmd.onecmd("add test title test5")
+        self.cmd.onecmd("add clause title clause1")
+        self.cmd.onecmd("add clause title clause2")
+        self.cmd.onecmd("add clause title clause3")
+        self.cmd.onecmd("add clause title clause4")
+        self.cmd.onecmd("add clause title clause5")
+        
+        self.cmd.onecmd("add test title test0")
+        self.cmd.onecmd("add test clause 1 title test1")
+        self.cmd.onecmd("add test clause 1 title test2")
+        self.cmd.onecmd("add test clause 2 title test3")
+        self.cmd.onecmd("add test clause 2 title test4")
+        self.cmd.onecmd("add test clause 3 title test5")
         self.cmd.onecmd("show")
         
 def test():

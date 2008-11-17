@@ -3,170 +3,22 @@
 #
 #
 #
-from tests import *
+from string import Template
 from script import *
 import re
 import sqlite3
 
-def dbopen(dbfile="db"):
-    return sqlite3.connect(dbfile)
+class TestToolSql(object):
+    def __init__(self):
+        self.dbfile = "testtool.db"
+        self.createtable()
 
-def TestTool_saveSql(self, dbfile):
-    print self.__dict__
-    finished = False
-    con = dbopen(dbfile)
-    try:
-        createtable(con)
-        con.commit()
-        cur = con.cursor()
-        # info
-        for item in (("title", self.title),
-                     ("mtime", self.mtime),
-                     ("author", self.author),
-                     ):
-            cur.execute('update info set value="%s" where name = "%s"' % (item[1], item[0]) )
-        con.commit()
-        self.tests.commitSql(con)
-        finished = True
-        dump(con)
-#    except:
-#        print "Exception!!"
-#        if not finished:
-#            con.rollback()
-    finally:
-        con.close()
-TestTool.saveSql = TestTool_saveSql
-
-# Report
-def Report_commitSql(self, con):
-    try:
-        cur = con.cursor()
-        cur.execute('''
-insert into report(test_id, reports_id, ctime, result, log) valuses(?,?,?,?,?)
-)''', (self.test_id, self.report_id, timenow(), self.result, self.log,))
-    except:
-        con.rollback()
-    else:
-        con.commit()
-Report.commitSql = Report_commitSql
-
-# Script
-def Script_fromXml(self, root):
-    self.host = root.getAttribute(u'host')
-    self.protocol = root.getAttribute(u'protocol')
-    self.source = root.firstChild.data
-    self.account = root.getAttribute(u'account')
-    if not self.account:
-        self.user = root.getAttribute(u'user')
-        self.passwd = root.getAttribute(u'passwd')
-    self.loop = root.getAttribute(u'loop')
-    if not self.protocol or self.protocol == "local":
-        self.__class__ = LocalScript
-    elif self.protocol == "telnet":
-        self.__class__ = TelnetScript
-    elif self.protocol == "ftp":
-        self.__class__ = FtpScript
-    else:
-        print "%s!!" % self.protocol
-Script.fromXml = Script_fromXml
-
-# Test
-def Test_fromXml(self, root):
-    self.id = root.getAttribute(u'id')
-    print root.__dict__
-    self.title = root.getElementsByTagName(u'title')[0].firstChild.data
-    self.description = root.getElementsByTagName(u'description')[0].firstChild.data
-    self.pubDate = root.getElementsByTagName(u'pubDate')[0].firstChild.data
-    for node in root.getElementsByTagName(u'procedure')[0].childNodes:
-        try:
-            scripts = []
-            for nodescript in node.getElementsByTagName(u'script'):
-                script = Script(self.env)
-                script.fromXml(nodescript)
-                scripts.append(script)
-            self.procedure[node.tagName] = scripts
-        except AttributeError, err:
-            continue
-Test.fromXml = Test_fromXml
-
-def Test_toXml(self, doc):
-    return self.report.toXml(doc)
-Test.toXml = Test_toXml
-
-# Tests
-def Tests_commitSql(self, con):
-    try:
-        cur = con.cursor()
-        cur.execute('insert into clause')
-    except:
-        con.rollback()
-    else:
-        con.commit()
-
-    self.id = root.getAttribute(u'id')
-    for node in root.childNodes:
-        try:
-            tag = node.tagName
-        except:
-            continue
-        if tag == u'test':
-            test = Test(self.env)
-            test.fromXml(node)
-            self.test_list.append(test)
-        elif tag == u'tests':
-            tests = Tests(self.env)
-            tests.fromXml(node)
-            self.test_list.append(tests)
-Tests.fromXml = Tests_fromXml
-
-def Tests_toXml(self, doc):
-    reports = doc.createElement(u'reports')
-    for test in self.test_list:
-        reports.appendChild(test.toXml(doc))
-    for tests in self.tests_list:
-        reports.appendChild(tests.toXml(doc))
-    return reports
-Tests.toXml = Tests_toXml
-
-# EnvParam
-def EnvParam_fromXml(self, element):
-    self.name = element.getAttribute(u'name')
-EnvParam.fromXml = EnvParam_fromXml
-
-# Account
-def Account_fromXml(self, element):
-    super(Account, self).fromXml(element)
-    self.host = element.getAttribute(u'host')
-    self.user = element.getAttribute(u'user')
-    self.passwd = element.getAttribute(u'passwd')
-Account.fromXml = Account_fromXml
-
-# Host
-def Host_fromXml(self, element):
-    super(Host, self).fromXml(element)
-    self.addr = element.getAttribute(u'addr')
-Host.fromXml = Host_fromXml
-
-# Env
-def Env_fromXml(self, root):
-    for element in root.getElementsByTagName(u'account'):
-        account = Account(element)
-        self.accounts[account.name] = account
-    for element in root.getElementsByTagName(u'host'):
-        host = Host(element)
-        self.hosts[host.name] = host
-Env.fromXml = Env_fromXml
-
-def dump(con):
-    cur = con.cursor()
-    for tbl in ["info", "clause1", "clause2", "clause3", "test", "reports", "report", "report"]:
-        print "[%s]" % tbl
-        cur.execute('select * from %s' % tbl)
-        for row in cur:
-            print row
-
-def createtable(con):
-    con.executescript('''
+    def openDb(self):
+        return sqlite3.connect(self.dbfile)
+    
+    def createtable(self):
+        con = self.openDb()
+        con.executescript('''
 create table if not exists info (
   name text unique,
   value text
@@ -182,13 +34,13 @@ create table if not exists clause (
 );
 create table if not exists test (
   idx integer primary key,
-  clause1 integer,
-  clause2 integer,
-  clause3 integer,
-  title text,
-  description text,
-  ctime datetime,
-  procedure text
+  clause1 integer default 0,
+  clause2 integer default 0,
+  clause3 integer default 0,
+  title text default NULL,
+  description text default NULL,
+  ctime datetime default CURRENT_TIMESTAMP,
+  procedure text default NULL
 );
 create table if not exists reports (
   idx integer primary key,
@@ -204,13 +56,87 @@ create table if not exists report (
   log text
 );
 ''')
+        con.commit()
+
+    def addTest(self, **kwds):
+        t_insert = Template('''
+insert into test
+    (clause1, clause2, clause3, title, procedure)
+    values ($clause1, $clause2, $clause3, $title, $procedure)
+''')
+        clause = map(int, kwds.get("clause", "1").split("-"))
+        if len(clause) < 3:
+            clause.extend([0, 0, 0])
+        clause1, clause2, clause3 = clause[0:3]
+        if kwds.has_key("title"):
+            title = "\"%s\"" % kwds.get("title")
+        else:
+            title = "NULL"
+        procedure = kwds.get("procedure", "NULL")
+        con = self.openDb()
+        cur = con.cursor()
+        print t_insert.substitute(locals())
+        cur.execute(t_insert.substitute(locals()))
+        con.commit()
+
+    def show(self):
+        cur = self.openDb().cursor()
+        for tbl in ["info", "clause", "test", "reports", "report", "report"]:
+            print "[%s]" % tbl
+            cur.execute('select * from %s' % tbl)
+            for row in cur:
+                print row
+
+    def showTest(self):
+        cur = self.openDb().cursor()
+        cur.execute('select distinct clause1 from test')
+        for c1 in map(lambda x: x[0], cur):
+            cur.execute('select distinct clause2 from test where clause1 = %d' % c1)
+            for c2 in map(lambda x: x[0], cur):
+                cur.execute('select distinct clause3 from test where clause1 = %d and clause2 = %d' % (c1, c2))
+                for c3 in map(lambda x: x[0], cur):
+                    cur.execute('''
+select clause1, clause2, clause3, title from test t1 
+    where clause1 = %d
+        and clause2 = %d
+        and clause3 = %d
+    order by ctime desc, idx desc limit 1''' % (c1, c2, c3))
+                    for row in cur:
+                        print "[clause %.3d-%.3d-%.3d]" % (row[0], row[1], row[2]),
+                        print "Title = %s" % row[3]
+                        
+#        cur.execute('''
+#select * from test t1 
+#    where not exists (
+#        select 1 from test t2 where 
+#            t1.clause1 = t2.clause1
+#            and t1.clause2 = t2.clause2
+#            and t1.clause3 = t2.clause3
+#            and (
+#                t1.ctime < t2.ctime
+#                or (t1.ctime = t2.ctime and t1.idx < t2.idx)
+#            )
+#        );
+#''')
+#        for row in cur:
+#            print row
+            
+    def clear(self):
+        con = self.openDb()
+        con.execute("drop table test")
+        con.commit()
 
 def test():
-    import xmllib
-
-    tool = TestTool()
-    tool.loadXml("../../xml/test.xml")
-    tool.saveSql("dbtest")
+    tool = TestToolSql()
+#    tool.clear()
+    tool = TestToolSql()
+#    for n1 in xrange(4):
+#        for n2 in xrange(10):
+#            c1 = n1 + 1
+#            c2 = n2 + 1
+#            tool.addTest(title="test%.3d-%.3d" % (c1, c2), clause="%d-%d" % (c1, c2))
+    tool.show()
+    tool.showTest()
 
 if __name__ == "__main__":
     test()
