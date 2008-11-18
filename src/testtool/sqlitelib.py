@@ -80,7 +80,9 @@ insert into test
         con.commit()
 
     def show(self):
-        cur = self.openDb().cursor()
+        con = self.openDb()
+        con.row_factory = sqlite3.Row
+        cur = con.cursor()
         for tbl in ["info", "clause", "test", "reports", "report", "report"]:
             print "[%s]" % tbl
             cur.execute('select * from %s' % tbl)
@@ -88,7 +90,9 @@ insert into test
                 print row
 
     def showTest(self):
-        cur = self.openDb().cursor()
+        con = self.openDb()
+        con.row_factory = sqlite3.Row
+        cur = con.cursor()
         cur.execute('select distinct clause1 from test')
         for c1 in map(lambda x: x[0], cur):
             cur.execute('select distinct clause2 from test where clause1 = %d' % c1)
@@ -102,8 +106,9 @@ select clause1, clause2, clause3, title from test t1
         and clause3 = %d
     order by ctime desc, idx desc limit 1''' % (c1, c2, c3))
                     for row in cur:
-                        print "[clause %.3d-%.3d-%.3d]" % (row[0], row[1], row[2]),
-                        print "Title = %s" % row[3]
+                        print "[clause %.3d-%.3d-%.3d]" % (
+                                        row["clause1"], row["clause2"], row["clause3"]),
+                        print "Title = %s" % row["title"]
                         
 #        cur.execute('''
 #select * from test t1 
